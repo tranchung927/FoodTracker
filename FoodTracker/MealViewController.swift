@@ -8,6 +8,7 @@
 
 import UIKit
 import os.log
+import CoreData
 
 class MealViewController: UIViewController, UITextFieldDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
@@ -21,10 +22,16 @@ class MealViewController: UIViewController, UITextFieldDelegate, UIImagePickerCo
          This value is either passed by `MealTableViewController` in `prepare(for:sender:)`
          or constructed as part of adding a new meal.
      */
-    var meal: Meal?
+    var meal: MealEntity?
+    
+    var managedObjectContext: NSManagedObjectContext?
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        if managedObjectContext == nil {
+            managedObjectContext = AppDelegate.shared.persistentContainer.viewContext
+        }
         
         // Handle the text field’s user input through delegate callbacks.
         nameTextField.delegate = self
@@ -33,8 +40,8 @@ class MealViewController: UIViewController, UITextFieldDelegate, UIImagePickerCo
         if let meal = meal {
             navigationItem.title = meal.name
             nameTextField.text = meal.name
-            photoImageView.image = meal.photo
-            ratingControl.rating = meal.rating
+            photoImageView.image = meal.photo as? UIImage
+            ratingControl.rating = Int(meal.rating)
         }
         
         // Enable the Save button only if the text field has a valid Meal name.
@@ -106,13 +113,24 @@ class MealViewController: UIViewController, UITextFieldDelegate, UIImagePickerCo
             os_log("The save button was not pressed, cancelling", log: OSLog.default, type: .debug)
             return
         }
-        
-        let name = nameTextField.text ?? ""
-        let photo = photoImageView.image
-        let rating = ratingControl.rating
+
         
         // Set the meal to be passed to MealTableViewController after the unwind segue.
-        meal = Meal(name: name, photo: photo, rating: rating)
+        guard let managedObjectContext = managedObjectContext else {
+            return
+        }
+        
+        if meal == nil {
+            //Create Meal
+            meal = MealEntity(context: managedObjectContext)
+        }
+        
+        if let meal = meal {
+            //ConfigureMeal
+            meal.name = nameTextField.text ?? ""
+            meal.photo = photoImageView.image
+            meal.rating = Int32(ratingControl.rating)
+        }
     }
     
     //MARK: Actions
